@@ -1,0 +1,62 @@
+name: JMeterAction
+on:
+ workflow_dispatch:
+   inputs:
+    targetconcurrency:
+      type: string
+      description: Target Concurrency
+      required: true
+    rampuptime:
+      type: string
+      description: Ramp Up Time
+      required: true
+    rampstepscount:
+      type: string
+      description: Ramp Steps Count
+      required: true
+    targetratetime:
+      type: string
+      description: Target Rate Time
+      required: true
+    thinktime:
+      type: string
+      description: Think Time
+      required: true
+   
+            
+jobs:
+ test-action:
+   runs-on: ubuntu-latest
+   steps:
+     - name: Cloning perfjenautomate repository
+       uses: actions/checkout@main
+       with:
+           ref: pokeapi
+     - name: Download dependencies
+       run: |
+             sudo apt-get install curl
+             sudo apt-get install unzip
+             sudo apt-get install tzdata
+     - name: Preparing Environment
+       run: |
+             sudo curl -O https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.5.tgz 
+             sudo tar -xzf apache-jmeter-5.5.tgz
+             sudo wget -O jpgc-casutg-2.10.zip https://jmeter-plugins.org/files/packages/jpgc-casutg-2.10.zip
+             sudo unzip -o jpgc-casutg-2.10.zip -d apache-jmeter-5.5/
+             sudo wget -P apache-jmeter-5.5/lib/ext/ https://github.com/mderevyankoaqa/jmeter-influxdb2-listener-plugin/releases/download/v2.5/jmeter-plugins-influxdb2-listener-2.5.jar
+     - name: Run JMeter Scenario
+       run: sh /home/runner/work/perfjenautomate/perfjenautomate/apache-jmeter-5.5/bin/jmeter.sh -n -t /home/runner/work/perfjenautomate/perfjenautomate/PokeAPI.jmx 
+             -JTargetConcurrency=${{ inputs.targetconcurrency }} -JRampUpTime=${{ inputs.rampuptime }} -JRampStepsCount=${{ inputs.rampstepscount }}
+             -JTargetRateTime=${{ inputs.targetratetime }} -JThinkTime=${{ inputs.thinktime }} 
+             -JAwsHost=3.145.94.205
+             -JInfluxToken=oqvSAhnYuOUvIfKDr_7NqrH39VJxSN7Df5vZpYOcmVV0RquENyfPPqNEvVh_S3AFwmnsmO9eMU0uXJ9zNWczEg==
+             -JInfluxOrg=performanceredteam -JInfluxBucket=performanceredteam
+             -l /home/runner/work/perfjenautomate/perfjenautomate/pokeapi.jtl
+     - name: Generate HTML Report
+       run: sh /home/runner/work/perfjenautomate/perfjenautomate/apache-jmeter-5.5/bin/jmeter.sh -g /home/runner/work/perfjenautomate/perfjenautomate/pokeapi.jtl
+            -o /home/runner/work/perfjenautomate/perfjenautomate/reports
+     - name: Upload HTML Report
+       uses: actions/upload-artifact@v4
+       with:
+         name: jmeter-test-results
+         path: /home/runner/work/perfjenautomate/perfjenautomate/reports
